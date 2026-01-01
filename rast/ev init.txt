@@ -1,0 +1,18 @@
+https://www.rust-lang.org/tools/install
+rustup-init.exe
+cargo --version
+rustc --version
+https://visualstudio.microsoft.com/visual-cpp-build-tools/
+cl 
+rustup show
+cargo clean
+cargo build --release
+
+
+dla android 
+cargo.toml+
+ [lib]
+name = "vda_server"
+crate-type = ["cdylib"]
+
+cargo ndk -t armeabi-v7a -t arm64-v8a -o ./app/src/main/jniLibs build --release

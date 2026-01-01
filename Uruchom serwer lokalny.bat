@@ -206,33 +206,31 @@ echo.
 
 set "files_ok=1"
 
-echo   %ESC%[96m  ^>^>%ESC%[0m %ESC%[97mVerifying start_server.py%ESC%[0m
-timeout /t 1 /nobreak >nul
+echo   %ESC%[96m  ^>^>%ESC%[0m %ESC%[97mVerifying GUI launcher (start_server.py)%ESC%[0m
 if not exist "%~dp0start_server.py" (
-    echo   %ESC%[91m    [X] Missing%ESC%[0m
+    echo   %ESC%[91m    [X] Missing GUI launcher%ESC%[0m
     set "files_ok=0"
 ) else (
-    echo   %ESC%[92m    [OK] Found%ESC%[0m
+    echo   %ESC%[92m    [OK] GUI launcher found%ESC%[0m
 )
 
-echo   %ESC%[96m  ^>^>%ESC%[0m %ESC%[97mVerifying server.py%ESC%[0m
-timeout /t 1 /nobreak >nul
-if not exist "%~dp0server.py" (
-    echo   %ESC%[91m    [X] Missing%ESC%[0m
+echo   %ESC%[96m  ^>^>%ESC%[0m %ESC%[97mVerifying backend (vda_server.exe)%ESC%[0m
+if not exist "%~dp0vda_server.exe" (
+    echo   %ESC%[91m    [X] Missing backend executable%ESC%[0m
     set "files_ok=0"
 ) else (
-    echo   %ESC%[92m    [OK] Found%ESC%[0m
+    echo   %ESC%[92m    [OK] Backend found%ESC%[0m
 )
 
-if !files_ok! equ 0 (
+if !files_ok! neq 1 (
     echo.
-    echo   %ESC%[91m    CRITICAL: Files missing!%ESC%[0m
+    echo   %ESC%[91m    CRITICAL: Required files missing!%ESC%[0m
     echo.
     pause
     exit /b 1
 )
 
-echo.
+
 
 REM ==================== READY ====================
 echo.
@@ -265,7 +263,8 @@ echo  %ESC%[90m  ---------------------------------------------------------------
 echo.
 
 REM ==================== EXECUTE ====================
-python "%~dp0start_server.py"
+start "" python "%~dp0start_server.py"
+
 
 if !errorlevel! neq 0 (
     echo.

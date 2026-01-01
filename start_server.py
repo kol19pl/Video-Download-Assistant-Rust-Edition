@@ -422,11 +422,11 @@ class FuturisticServerGUI:
         python_version = sys.version.split()[0]
         self.log_activity(f"✅ Python {python_version}", 'success')
         
-        # server.py
-        if os.path.exists('server.py'):
-            self.log_activity("✅ server.py znaleziony", 'success')
+        # vda_server.exe
+        if os.path.exists('vda_server.exe'):
+            self.log_activity("✅ vda_server.exe znaleziony", 'success')
         else:
-            self.log_activity("❌ server.py NIE znaleziony!", 'error')
+            self.log_activity("❌ vda_server.exe NIE znaleziony!", 'error')
         
         # yt-dlp
         try:
@@ -563,8 +563,14 @@ class FuturisticServerGUI:
         os.environ['VDA_DOWNLOADS_FOLDER'] = self.downloads_folder
         
         try:
+            # Ścieżka do binarki serwera w Rust (vda_server.exe obok start_server.py)
+            exe_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                'vda_server.exe'
+            )
+
             self.server_process = subprocess.Popen(
-                [sys.executable, 'server.py'],
+                [exe_path, '--port', '8080'],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -765,10 +771,10 @@ class FuturisticServerGUI:
 
 def main():
     """Główny punkt wejścia"""
-    if not os.path.exists('server.py'):
+    if not os.path.exists('vda_server.exe'):
         messagebox.showerror(
             "Błąd",
-            "server.py nie znaleziony!\n\nUpewnij się, że oba pliki są w tym samym folderze."
+            "vda_server.exe nie znaleziony!\n\nUpewnij się, że oba pliki są w tym samym folderze."
         )
         sys.exit(1)
     
