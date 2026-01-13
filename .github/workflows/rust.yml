@@ -1,22 +1,99 @@
-name: Rust
+name: Rust Multi-Platform Release (ARM + Windows GNU)
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    tags:
+      - "v*"
 
 env:
   CARGO_TERM_COLOR: always
+  BIN_NAME: vda_server
 
 jobs:
   build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
 
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux GNU x64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+
+          # Linux MUSL x64 (Synology Intel)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+
+          # Linux MUSL ARM64 (Synology ARM)
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+
+          # Windows MSVC x64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+
+          # Windows GNU x64
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+
+          # Windows MSVC x86
+          - os: windows-latest
+            target: i686-pc-windows-msvc
+
+          # macOS Intel
+          - os: macos-latest
+            target: x86_64-apple-darwin
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+      - uses: actions/checkout@v4
+
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.target }}
+
+      # MUSL + cross tools (x86_64 + aarch64)
+      - name: Install MUSL tools
+        if: startsWith(matrix.target, 'x86_64-unknown-linux-musl')
+        run: |
+          sudo apt update
+          sudo apt install -y musl-tools
+
+      - name: Install ARM64 MUSL tools
+        if: matrix.target == 'aarch64-unknown-linux-musl'
+        run: |
+          sudo apt update
+          sudo apt install -y gcc-aarch64-linux-gnu
+
+      # Cache Cargo
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release
+        run: cargo build --release --target ${{ matrix.target }} --locked
+
+      - name: Rename binary
+        shell: bash
+        run: |
+          EXT=""
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            EXT=".exe"
+          fi
+
+          SRC="target/${{ matrix.target }}/release/${BIN_NAME}${EXT}"
+          DST="${BIN_NAME}-${{ matrix.target }}${EXT}"
+
+          cp "$SRC" "$DST"
+          echo "BIN_OUT=$DST" >> $GITHUB_ENV
+
+      - name: Upload binary to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.BIN_OUT }}
+
+
