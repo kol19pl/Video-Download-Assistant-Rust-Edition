@@ -25,11 +25,11 @@ jobs:
           LAST_TAG=$(git tag --sort=-creatordate | head -n1 || echo "")
           echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
 
-      # 3. Ustawienie nowego tagu na dzisiejszą datę
+      # 3. Ustawienie nowego tagu na dzisiejszą datę (vYYYY-MM-DD)
       - name: Set new tag
         id: new_tag
         run: |
-          NEW_TAG=v$(date +'%Y.%m.%d')
+          NEW_TAG=v$(date +'%Y-%m-%d')
           echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
 
       # 4. Stworzenie Full Changelog między ostatnim a nowym tagiem
@@ -42,7 +42,7 @@ jobs:
             CHANGELOG="Initial release"
           fi
 
-          # Zapisanie changeloga jako output kroku (bez problemów z env)
+          # Zapisanie changeloga jako output kroku
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -54,7 +54,7 @@ jobs:
           tag: ${{ env.NEW_TAG }}
           name: "Release ${{ env.NEW_TAG }}"
           body: |
-            Automated weekly release created on $(date +'%Y.%m.%d')
+            Automated weekly release created on $(date +'%Y-%m-%d')
 
             **Full Changelog:**
             ${{ steps.changelog.outputs.changelog }}
