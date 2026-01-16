@@ -46,17 +46,16 @@ cargo clean
 
 foreach ($target in $targetsLinux) {
 
-    $linuxPath = $scriptDir -replace "\\", "/"
-    #$linuxPath = "/mnt" + $linuxPath.Substring(0,2).ToLower() + $linuxPath.Substring(2)
-    $linuxPath = "/mnt/c/Users/kol19/Downloads/yt/vda_server"
-    
+    # Convert Windows path to WSL path format
+    $linuxPath = $scriptDir -replace '\\', '/' -replace '^([A-Za-z]):', '/mnt/$1' -replace ' ', '\\ '
+
     Write-Host "Buduję Linux target: $target"
     #wsl -l -v
     #bash -c rustc --version
     #wsl rustc --version
     #wsl cargo --version
     #wsl cargo build --release --target $target
-    wsl bash -lc "cd '/mnt/c/Users/kol19/Downloads/yt/vda_server' && cargo build --release --target $target"
+    wsl bash -lc "cd '$linuxPath' && cargo build --release --target $target"
 
 
     # Nazwa binarki Linux (bez .exe)
@@ -104,6 +103,3 @@ cargo clean
 
 
 Write-Host "Build zakonczony. Wszystkie pliki w folderze: $outDir"
-
-
-
