@@ -3,58 +3,65 @@ name: Auto yt-dlp update
 on:
   schedule:
     - cron: "0 0 * * 1" # poniedziałek o 00:00 UTC
-  workflow_dispatch: {}   # możliwość ręcznego uruchomienia
+  workflow_dispatch: {}
 
 jobs:
   check-and-release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # potrzebne do tworzenia tagów i release'ów
+      contents: write
 
     steps:
-      # 1. Pobranie repozytorium na runnera
+      # 1. Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # 2. Pobranie najnowszego release yt-dlp z GitHub
       - name: Get latest yt-dlp release tag
         id: yt
         run: |
           latest=$(curl -s https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest | jq -r .tag_name)
-          echo "latest=$latest" >> $GITHUB_ENV
-          echo "::set-output name=tag::$latest"
+          echo "LATEST=$latest" >> $GITHUB_ENV
+          echo "Latest yt-dlp release: $latest"
 
-      # 3. Pobranie ostatniego lokalnego tagu w repo
-      - name: Get last local tag
-        id: last
+      # 3. Ustawienie nowego tagu w formacie vYYYY-MM-DD
+      - name: Set new tag (vYYYY-MM-DD)
+        id: new_tag
+        run: |
+          NEW_TAG=v$(date +'%Y-%m-%d')
+          echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
+          echo "Nowy tag: $NEW_TAG"
+
+      # 4. Sprawdzenie, czy tag już istnieje w repo
+      - name: Check if tag exists
+        id: check_tag
         run: |
           git fetch --tags
-          LAST_TAG=$(git tag --list "v*" | sort -V | tail -n1 || echo "")
-          echo "last=$LAST_TAG" >> $GITHUB_ENV
-          echo "::set-output name=last::$LAST_TAG"
-
-      # 4. Porównanie wersji
-      - name: Compare versions
-        id: compare
-        run: |
-          LAST=$LAST_TAG   # odczytujemy z env
-          LAST_TAG_CLEAN=${LAST#v}   # usuwamy 'v' z początku
-          echo "Comparing latest=${latest} with last=${LAST_TAG_CLEAN}"
-
-          if [[ "${latest}" == "$LAST_TAG_CLEAN" ]]; then
-            echo "changed=false" >> $GITHUB_OUTPUT
+          if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
           else
-            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "exists=false" >> $GITHUB_OUTPUT
 
-      # 5. Tworzenie nowego tagu i release tylko jeśli wykryto zmianę
-      - name: Create new tag and release
-        if: steps.compare.outputs.changed == 'true'
-        id: release
+      # 5. Tworzenie release tylko jeśli tag nie istnieje
+      - name: Create new release
+        if: steps.check_tag.outputs.exists == 'false'
         uses: ncipollo/release-action@v1
         with:
-          tag: v$(date +'%Y.%m.%d')
-          name: "yt-dlp update v$(date +'%Y.%m.%d')"
-          body: "Automated update: latest yt-dlp version ${latest} dla synology DSM"
+          tag: ${{ env.NEW_TAG }}
+          name: "${{ env.NEW_TAG }}"
+          body: |
+            Automated update: latest yt-dlp version ${{ env.LATEST }} dla synology DSM
+          allowUpdates: true
 
+      # 6. Push tag do repo (tylko jeśli nowy release)
+      - name: Push tag to repo
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag ${{ env.NEW_TAG }}
+          git push origin ${{ env.NEW_TAG }}
 
 
