@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # potrzebne do pełnego logu commitów
+          fetch-depth: 0
 
       # 2. Pobranie ostatniego tagu
       - name: Get last tag
@@ -42,9 +42,10 @@ jobs:
             CHANGELOG="Initial release"
           fi
 
-          # Encode in base64 to safely handle multiline/special chars
-          CHANGELOG_B64=$(echo "$CHANGELOG" | base64)
-          echo "CHANGELOG_B64=$CHANGELOG_B64" >> $GITHUB_ENV
+          # Zapisanie changeloga jako output kroku (bez problemów z env)
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       # 5. Tworzenie release z tagiem i changelogiem
       - name: Create new release
@@ -56,5 +57,6 @@ jobs:
             Automated weekly release created on $(date +'%Y.%m.%d')
 
             **Full Changelog:**
-            $(echo "${{ env.CHANGELOG_B64 }}" | base64 --decode)
+            ${{ steps.changelog.outputs.changelog }}
           allowUpdates: true
+
