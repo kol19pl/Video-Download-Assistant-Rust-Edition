@@ -1,0 +1,40 @@
+#!/bin/sh
+
+PKG_NAME="vda_serwer"
+PKG_DIR="/var/packages/$PKG_NAME"
+VAR_DIR="$PKG_DIR/var"
+
+# Check if we have a backup from preupgrade
+BACKUP_PATH_FILE="/tmp/${PKG_NAME}_backup_path.txt"
+if [ -f "$BACKUP_PATH_FILE" ]; then
+    BACKUP_DIR=$(cat "$BACKUP_PATH_FILE")
+    rm -f "$BACKUP_PATH_FILE"
+
+    if [ -d "$BACKUP_DIR" ]; then
+        # Restore configuration files
+        mkdir -p "$VAR_DIR"
+
+        if [ -f "$BACKUP_DIR/config.env" ]; then
+            cp "$BACKUP_DIR/config.env" "$VAR_DIR/"
+        fi
+
+        if [ -f "$BACKUP_DIR/config.json" ]; then
+            cp "$BACKUP_DIR/config.json" "$VAR_DIR/"
+        fi
+
+        # Clean up backup
+        rm -rf "$BACKUP_DIR"
+    fi
+fi
+
+# Note: DSM handles all permissions automatically
+if [ -d "$VAR_DIR" ]; then
+    echo "Configuration directory exists: $VAR_DIR"
+fi
+
+# Start the service with new version
+if [ -f "$PKG_DIR/scripts/start-stop-status" ]; then
+    "$PKG_DIR/scripts/start-stop-status" start
+fi
+
+exit 0

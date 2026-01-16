@@ -1,0 +1,66 @@
+/* VDA Server DSM UI Styles */
+/* This file provides additional styling for the VDA Server DSM interface */
+
+.dsm-ui {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Status indicators */
+.status-running {
+    color: #4CAF50;
+}
+
+.status-stopped {
+    color: #F44336;
+}
+
+.status-error {
+    color: #FF9800;
+}
+
+/* Form elements */
+.form-control:focus {
+    border-color: #2196F3;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+/* Button styles */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Logs container */
+.logs-container {
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.log-error {
+    color: #F44336;
+}
+
+.log-warning {
+    color: #FF9800;
+}
+
+.log-info {
+    color: #2196F3;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .container {
+        margin: 10px;
+        padding: 10px;
+    }
+
+    .nav-tabs {
+        flex-direction: column;
+    }
+
+    .nav-tab {
+        margin-bottom: 5px;
+    }
+}

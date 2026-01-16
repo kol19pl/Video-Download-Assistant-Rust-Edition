@@ -1,0 +1,140 @@
+{
+  "package": "vda_serwer",
+  "version": "1.0",
+  "title": "VDA Server Management",
+  "description": "Manage your Video Download Assistant server",
+  "pages": [
+    {
+      "id": "status",
+      "title": "Status",
+      "icon": "status",
+      "content": {
+        "type": "status",
+        "service_name": "vda_serwer",
+        "indicators": [
+          {
+            "id": "service_status",
+            "type": "service_status",
+            "label": "Service Status"
+          },
+          {
+            "id": "port",
+            "type": "text",
+            "label": "Listening Port"
+          },
+          {
+            "id": "download_dir",
+            "type": "text",
+            "label": "Download Directory"
+          }
+        ],
+        "actions": [
+          {
+            "id": "start",
+            "type": "button",
+            "label": "Start Service",
+            "command": "start"
+          },
+          {
+            "id": "stop",
+            "type": "button",
+            "label": "Stop Service",
+            "command": "stop"
+          },
+          {
+            "id": "restart",
+            "type": "button",
+            "label": "Restart Service",
+            "command": "restart"
+          }
+        ]
+      }
+    },
+    {
+      "id": "configuration",
+      "title": "Configuration",
+      "icon": "settings",
+      "content": {
+        "type": "form",
+        "fields": [
+          {
+            "id": "download_dir",
+            "type": "path",
+            "label": "Download Directory",
+            "default": "/volume1/vda_serwer",
+            "help": "Directory where downloaded files will be stored"
+          },
+          {
+            "id": "port",
+            "type": "number",
+            "label": "Server Port",
+            "default": "8081",
+            "min": "1024",
+            "max": "65535",
+            "help": "Port number for the server"
+          },
+          {
+            "id": "verbose",
+            "type": "checkbox",
+            "label": "Verbose Logging",
+            "default": false,
+            "help": "Enable detailed logging"
+          }
+        ],
+        "actions": [
+          {
+            "id": "save",
+            "type": "button",
+            "label": "Save Configuration",
+            "command": "save_config"
+          }
+        ]
+      }
+    },
+    {
+      "id": "logs",
+      "title": "Logs",
+      "icon": "logs",
+      "content": {
+        "type": "logs",
+        "log_file": "/var/packages/vda_serwer/var/vda_serwer.log",
+        "actions": [
+          {
+            "id": "clear",
+            "type": "button",
+            "label": "Clear Logs",
+            "command": "clear_logs"
+          },
+          {
+            "id": "download",
+            "type": "button",
+            "label": "Download Logs",
+            "command": "download_logs"
+          }
+        ]
+      }
+    },
+    {
+      "id": "about",
+      "title": "About",
+      "icon": "info",
+      "content": {
+        "type": "static",
+        "sections": [
+          {
+            "title": "VDA Server",
+            "content": "Video Download Assistant server based on Rust and yt-dlp"
+          },
+          {
+            "title": "Version",
+            "content": "1.0.0"
+          },
+          {
+            "title": "Maintainer",
+            "content": "Kol19pl"
+          }
+        ]
+      }
+    }
+  ]
+}

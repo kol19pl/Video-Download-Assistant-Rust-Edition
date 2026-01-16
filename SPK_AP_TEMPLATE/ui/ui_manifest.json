@@ -1,0 +1,36 @@
+{
+  "package": "vda_serwer",
+  "name": "VDA Server UI",
+  "version": "1.0.0",
+  "min_dsm_version": "7.1-42661",
+  "author": "Kol19pl",
+  "description": "Management interface for VDA Server",
+  "entry_point": "ui.html",
+  "api_version": "1",
+  "permissions": [
+    "read_config",
+    "write_config",
+    "service_control",
+    "read_logs"
+  ],
+  "pages": [
+    {
+      "id": "main",
+      "title": "VDA Server",
+      "icon": "packages",
+      "default": true,
+      "components": [
+        "status",
+        "configuration",
+        "logs",
+        "about"
+      ]
+    }
+  ],
+  "scripts": [
+    "ui_handler.sh"
+  ],
+  "styles": [
+    "styles.css"
+  ]
+}

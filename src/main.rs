@@ -1,4 +1,3 @@
-mod build;
 mod models;
 mod setup;
 mod pobieracz;
@@ -25,7 +24,7 @@ use std::net::{IpAddr, Ipv4Addr};
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
 use dirs::download_dir;
-use crate::api_handler::{check_ytdlp_handler, download_handler, queue_handler, status_handler, verify_premium_handler};
+use crate::api_handler::{check_ytdlp_handler, download_handler, download_handlerv2, queue_handler, status_handler, verify_premium_handler};
 use crate::dodatkowe_funkcje::{downloads_folder, load_queue_from_file, log_info, log_error, save_queue_to_file, set_global_download_dir};
 use crate::models::{DownloadParams, DownloadQueueItem, DownloadRequest, DownloadResponse, JobResult, StatusResponse, YtDlpStatus};
 use crate::pobieracz::download_worker_loop;
@@ -138,8 +137,10 @@ async fn main() -> std::io::Result<()> {
     let downloads = downloads_folder();
 
 
+    let version = option_env!("VDA_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"));
     log_info(&format!(
-        "Video Download Assistant Server uruchamia się na https://{server_ip}:{port}"
+        "🚀 Video Download Assistant Server {} uruchamia się na https://{server_ip}:{port}",
+        version
     ));
     log_info(&format!("📁 Folder pobierania: {downloads}"));
 
@@ -198,6 +199,7 @@ async fn main() -> std::io::Result<()> {
             .route("/check-ytdlp", web::get().to(check_ytdlp_handler))
             .route("/queue", web::get().to(queue_handler))
             .route("/download", web::post().to(download_handler))
+            .route("/downloadV2", web::post().to(download_handlerv2))
             .route("/verify-premium", web::post().to(verify_premium_handler))
     })
     //.bind(("127.0.0.1", port))?
@@ -206,4 +208,3 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await
 }
-

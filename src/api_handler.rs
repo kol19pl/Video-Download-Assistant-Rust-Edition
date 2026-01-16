@@ -4,15 +4,16 @@ use std::process::{Command, Stdio};
 use std::sync::atomic::Ordering;
 use actix_web::{web, HttpResponse, Responder};
 use tokio::sync::oneshot;
-use crate::{dodatkowe_funkcje, log_error, log_info, setup, AppState, DownloadJob, VerifyPremiumRequest, VerifyPremiumResponse};
-use crate::dodatkowe_funkcje::downloads_folder;
+use crate::{dodatkowe_funkcje, log_error, log_info, setup, AppState, DownloadJob, VerifyPremiumRequest, VerifyPremiumResponse, QUEUE_LEN};
+use crate::dodatkowe_funkcje::{downloads_folder, save_queue_to_file};
 use crate::models::{DownloadParams, DownloadQueueItem, DownloadRequest, DownloadResponse, JobResult, StatusResponse};
 
 pub(crate) async fn status_handler() -> impl Responder {
     let folder = downloads_folder();
+    let version = option_env!("VDA_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"));
     let resp = StatusResponse {
         status: "running",
-        version: "1.0.0",
+        version,
         timestamp: dodatkowe_funkcje::current_unix_time_f64(),
         downloads_folder: folder,
     };
@@ -110,7 +111,164 @@ pub(crate) async fn verify_premium_handler(body: web::Json<VerifyPremiumRequest>
     }
 }
 
+
 pub(crate) async fn download_handler(
+    body: web::Json<DownloadRequest>,
+    app_state: web::Data<AppState>,
+) -> impl Responder {
+    let data = body.into_inner();
+
+    if data.url.trim().is_empty() {
+        return HttpResponse::BadRequest().json(DownloadResponse {
+            success: false,
+            message: None,
+            error: Some("URL jest wymagany".into()),
+            output_path: None,
+            id: None,
+        });
+    }
+
+    let url = data.url;
+    let quality = data.quality.unwrap_or_else(|| "best".into());
+    let format_selector = data.format.unwrap_or_else(|| "mp4".into());
+    let subfolder = data.subfolder.unwrap_or_default();
+    let custom_title = data.title;
+    let username = data.username;
+    let password = data.password;
+    let has_premium = username.is_some() && password.is_some();
+
+    log_info("📥 Otrzymano żądanie pobierania:");
+    log_info(&format!("   URL: {url}"));
+    log_info(&format!("   Jakość: {quality}"));
+    log_info(&format!("   Format: {format_selector}"));
+
+    if has_premium {
+        if let Some(u) = &username {
+            log_info(&format!("👑 Pobieranie Premium dla użytkownika: {u} (hasło: ****)"));
+        }
+    }
+
+    let mut base_path = PathBuf::from(downloads_folder());
+    if !subfolder.is_empty() {
+        base_path.push(&subfolder);
+        log_info(&format!("📂 Używam podfolderu: {}", base_path.to_string_lossy()));
+    }
+    log_info(&format!(
+        "📁 Folder docelowy: {}",
+        base_path.to_string_lossy()
+    ));
+
+    if let Err(e) = fs::create_dir_all(&base_path) {
+        let msg = format!("Nie udało się utworzyć folderu: {e}");
+        log_error(&msg);
+        return HttpResponse::InternalServerError().json(DownloadResponse {
+            success: false,
+            message: None,
+            error: Some(msg),
+            output_path: None,
+            id: None,
+        });
+    }
+
+    let job_id = app_state
+        .job_counter
+        .fetch_add(1, Ordering::SeqCst)
+        .wrapping_add(1);
+
+    let params = DownloadParams {
+        url: url.clone(),
+        quality: quality.clone(),
+        format_selector: format_selector.clone(),
+        output_path: base_path.clone(),
+        custom_title: custom_title.clone(),
+        username: username.clone(),
+        password: password.clone(),
+    };
+
+    let queue_item = DownloadQueueItem {
+        id: job_id,
+        url,
+        quality,
+        format_selector,
+        subfolder,
+        title: custom_title,
+        username,
+        password,
+    };
+
+
+    {
+        let mut queue = app_state.queue.lock().unwrap();
+        queue.push(queue_item);
+        save_queue_to_file(&queue);
+    }
+
+    let (resp_tx, resp_rx) = oneshot::channel::<JobResult>();
+
+    let job = DownloadJob {
+        id: job_id,
+        params,
+        resp_tx,
+    };
+
+    if let Err(e) = app_state.job_sender.send(job).await {
+        let msg = format!("Nie udało się dodać zadania do kolejki: {e}");
+        log_error(&msg);
+        return HttpResponse::InternalServerError().json(DownloadResponse {
+            success: false,
+            message: None,
+            error: Some("Nie udało się dodać zadania do kolejki".into()),
+            output_path: None,
+            id: None,
+        });
+    }
+
+    let queue_pos = QUEUE_LEN.fetch_add(1, Ordering::SeqCst) + 1;
+    log_info(&format!(
+        "📥 Dodano pobieranie #{job_id} do kolejki (pozycja: {queue_pos})"
+    ));
+
+    match resp_rx.await {
+        Ok(res) => {
+            QUEUE_LEN.fetch_sub(1, Ordering::SeqCst);
+            if res.success {
+                HttpResponse::Ok().json(DownloadResponse {
+                    success: true,
+                    message: res.message,
+                    error: None,
+                    output_path: res.output_path,
+                    id: Some(job_id),
+                })
+            } else {
+                let status = res.http_status;
+                HttpResponse::build(actix_web::http::StatusCode::from_u16(status).unwrap_or(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR))
+                    .json(DownloadResponse {
+                        success: false,
+                        message: res.message,
+                        error: res.error,
+                        output_path: res.output_path,
+                        id: None,
+                    })
+            }
+        }
+        Err(_) => {
+            QUEUE_LEN.fetch_sub(1, Ordering::SeqCst);
+            let msg = "Błąd kolejki pobierania (kanał przerwany)".to_string();
+            log_error(&msg);
+            HttpResponse::InternalServerError().json(DownloadResponse {
+                success: false,
+                message: None,
+                error: Some(msg),
+                output_path: None,
+                id: None,
+            })
+        }
+    }
+}
+
+
+
+pub(crate) async fn download_handlerv2(
     body: web::Json<DownloadRequest>,
     app_state: web::Data<AppState>,
 ) -> impl Responder {

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VDA Server Management</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Basic DSM-like styling */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .nav-tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .nav-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            margin-right: 5px;
+            background-color: #f0f0f0;
+        }
+        .nav-tab.active {
+            background-color: white;
+            border-color: #ddd;
+            border-bottom-color: white;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .status-panel, .config-panel, .logs-panel, .about-panel {
+            padding: 15px;
+        }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .status-dot.running {
+            background-color: #4CAF50;
+        }
+        .status-dot.stopped {
+            background-color: #F44336;
+        }
+        .status-dot.error {
+            background-color: #FF9800;
+        }
+        .btn {
+            padding: 8px 16px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn:hover {
+            background-color: #0b7dda;
+        }
+        .btn-danger {
+            background-color: #F44336;
+        }
+        .btn-danger:hover {
+            background-color: #d32f2f;
+        }
+        .btn-success {
+            background-color: #4CAF50;
+        }
+        .btn-success:hover {
+            background-color: #388E3C;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .logs-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f9f9f9;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>VDA Server Management</h1>
+        </div>
+
+        <div class="nav-tabs">
+            <div class="nav-tab active" data-tab="status">Status</div>
+            <div class="nav-tab" data-tab="configuration">Configuration</div>
+            <div class="nav-tab" data-tab="logs">Logs</div>
+            <div class="nav-tab" data-tab="about">About</div>
+        </div>
+
+        <!-- Status Tab -->
+        <div id="status" class="tab-content active">
+            <div class="status-panel">
+                <h2>Service Status</h2>
+                <div id="status-content">
+                    <div class="status-indicator">
+                        <div class="status-dot" id="service-status-dot"></div>
+                        <span id="service-status-text">Loading...</span>
+                    </div>
+                    <div class="status-indicator">
+                        <strong>Port:</strong>
+                        <span id="service-port">-</span>
+                    </div>
+                    <div class="status-indicator">
+                        <strong>Download Directory:</strong>
+                        <span id="service-download-dir">-</span>
+                    </div>
+                </div>
+
+                <div class="actions" style="margin-top: 20px;">
+                    <button class="btn btn-success" id="start-btn">Start Service</button>
+                    <button class="btn btn-danger" id="stop-btn">Stop Service</button>
+                    <button class="btn" id="restart-btn">Restart Service</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Tab -->
+        <div id="configuration" class="tab-content">
+            <div class="config-panel">
+                <h2>Configuration</h2>
+                <form id="config-form">
+                    <div class="form-group">
+                        <label class="form-label" for="download_dir">Download Directory:</label>
+                        <input type="text" class="form-control" id="download_dir" name="download_dir">
+                        <small>Directory where downloaded files will be stored</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="port">Server Port:</label>
+                        <input type="number" class="form-control" id="port" name="port" min="1024" max="65535">
+                        <small>Port number for the server (1024-65535)</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="verbose" name="verbose">
+                            Enable Verbose Logging
+                        </label>
+                        <small>Enable detailed logging for debugging</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-success">Save Configuration</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id="logs" class="tab-content">
+            <div class="logs-panel">
+                <h2>Logs</h2>
+                <div class="logs-container" id="logs-container">
+                    Loading logs...
+                </div>
+                <div class="actions" style="margin-top: 10px;">
+                    <button class="btn" id="refresh-logs-btn">Refresh Logs</button>
+                    <button class="btn" id="clear-logs-btn">Clear Logs</button>
+                    <button class="btn" id="download-logs-btn">Download Logs</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- About Tab -->
+        <div id="about" class="tab-content">
+            <div class="about-panel">
+                <h2>About VDA Server</h2>
+                <div class="about-content">
+                    <h3>VDA Server</h3>
+                    <p>Video Download Assistant server based on Rust and yt-dlp</p>
+
+                    <h3>Version</h3>
+                    <p>1.0.0</p>
+
+                    <h3>Maintainer</h3>
+                    <p>Kol19pl</p>
+
+                    <h3>Description</h3>
+                    <p>A powerful video download assistant that uses yt-dlp for downloading videos from various platforms.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching functionality
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs and content
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+                // Add active class to clicked tab and corresponding content
+                tab.classList.add('active');
+                const tabId = tab.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // Load status on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStatus();
+            loadConfig();
+            loadLogs();
+
+            // Set up button event listeners
+            document.getElementById('start-btn').addEventListener('click', startService);
+            document.getElementById('stop-btn').addEventListener('click', stopService);
+            document.getElementById('restart-btn').addEventListener('click', restartService);
+            document.getElementById('refresh-logs-btn').addEventListener('click', loadLogs);
+            document.getElementById('clear-logs-btn').addEventListener('click', clearLogs);
+            document.getElementById('download-logs-btn').addEventListener('click', downloadLogs);
+
+            // Set up config form submission
+            document.getElementById('config-form').addEventListener('submit', saveConfig);
+        });
+
+        // API Functions
+        function callApi(endpoint, method = 'GET', data = null) {
+            return fetch(`/webman/modules/thirdparty/vda_serwer/${endpoint}`, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: data ? new URLSearchParams(data).toString() : null
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.text();
+            })
+            .catch(error => {
+                console.error('API Error:', error);
+                return JSON.stringify({error: error.message});
+            });
+        }
+
+        // Status Functions
+        function loadStatus() {
+            callApi('get_status')
+                .then(data => {
+                    try {
+                        const status = JSON.parse(data);
+                        const statusDot = document.getElementById('service-status-dot');
+                        const statusText = document.getElementById('service-status-text');
+
+                        // Update status indicator
+                        statusDot.className = `status-dot ${status.status}`;
+                        statusText.textContent = status.status.charAt(0).toUpperCase() + status.status.slice(1);
+
+                        // Update additional info
+                        document.getElementById('service-port').textContent = status.port || '-';
+                        document.getElementById('service-download-dir').textContent = status.download_dir || '-';
+                    } catch (e) {
+                        console.error('Error parsing status:', e);
+                    }
+                });
+        }
+
+        function startService() {
+            callApi('start_service', 'POST')
+                .then(() => {
+                    setTimeout(loadStatus, 1000);
+                });
+        }
+
+        function stopService() {
+            callApi('stop_service', 'POST')
+                .then(() => {
+                    setTimeout(loadStatus, 1000);
+                });
+        }
+
+        function restartService() {
+            callApi('restart_service', 'POST')
+                .then(() => {
+                    setTimeout(loadStatus, 1000);
+                });
+        }
+
+        // Configuration Functions
+        function loadConfig() {
+            callApi('get_status')
+                .then(data => {
+                    try {
+                        const config = JSON.parse(data);
+                        document.getElementById('download_dir').value = config.download_dir || '/volume1/vda_serwer';
+                        document.getElementById('port').value = config.port || '8081';
+                        document.getElementById('verbose').checked = config.verbose === '1';
+                    } catch (e) {
+                        console.error('Error loading config:', e);
+                    }
+                });
+        }
+
+        function saveConfig(e) {
+            e.preventDefault();
+            const formData = {
+                download_dir: document.getElementById('download_dir').value,
+                port: document.getElementById('port').value,
+                verbose: document.getElementById('verbose').checked ? '1' : '0'
+            };
+
+            callApi('save_config', 'POST', formData)
+                .then(response => {
+                    alert('Configuration saved successfully!');
+                    loadStatus();
+                })
+                .catch(error => {
+                    alert('Error saving configuration: ' + error.message);
+                });
+        }
+
+        // Logs Functions
+        function loadLogs() {
+            callApi('get_logs')
+                .then(logs => {
+                    document.getElementById('logs-container').textContent = logs || 'No logs available';
+                });
+        }
+
+        function clearLogs() {
+            if (confirm('Are you sure you want to clear the logs?')) {
+                callApi('clear_logs', 'POST')
+                    .then(() => {
+                        loadLogs();
+                    });
+            }
+        }
+
+        function downloadLogs() {
+            callApi('get_logs')
+                .then(logs => {
+                    const blob = new Blob([logs], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'vda_server_logs_' + new Date().toISOString().slice(0, 10) + '.log';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                });
+        }
+    </script>
+</body>
+</html>

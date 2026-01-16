@@ -28,10 +28,6 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
 
-          # Linux MUSL ARM64 (Synology ARM)
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
-
           # Windows MSVC x64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -98,4 +94,23 @@ jobs:
         with:
           files: ${{ env.BIN_OUT }}
 
+      - name: Build SPK package
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: |
+          mkdir -p relese/_temp _build/Spk _build/package
+          packageName=$(grep '^package=' "SPK_AP_TEMPLATE/INFO" | cut -d'=' -f2 | sed 's/"//g' | tr -d ' ')
+          cp ${{ env.BIN_OUT }} SPK_AP_TEMPLATE/pakiet/
+          rsync -av --exclude='pakiet' SPK_AP_TEMPLATE/ _build/Spk/
+          rsync -ah SPK_AP_TEMPLATE/pakiet/ _build/package/
+          cd _build/package
+          tar czf ../Spk/package.tgz *
+          cd ../Spk
+          tar cf ../../relese/_temp/${packageName}.spk *
+          cd ../..
+          echo "SPK_OUT=relese/_temp/${packageName}.spk" >> $GITHUB_ENV
 
+      - name: Upload SPK to Release
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.SPK_OUT }}

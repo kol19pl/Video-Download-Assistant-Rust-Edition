@@ -1,0 +1,31 @@
+#!/bin/sh
+
+PKG_NAME="vda_serwer"
+PKG_DIR="/var/packages/$PKG_NAME"
+VAR_DIR="$PKG_DIR/var"
+UI_DIR="$PKG_DIR/target/ui"
+
+# Stop the service if it's running
+if [ -f "$PKG_DIR/scripts/start-stop-status" ]; then
+    "$PKG_DIR/scripts/start-stop-status" stop
+fi
+
+# Remove UI files
+if [ -d "$UI_DIR" ]; then
+    rm -rf "$UI_DIR"
+fi
+
+# Remove configuration files
+if [ -d "$VAR_DIR" ]; then
+    rm -rf "$VAR_DIR"
+fi
+
+# Remove package directory (but preserve user data in /volume1)
+if [ -d "$PKG_DIR" ]; then
+    rm -rf "$PKG_DIR"
+fi
+
+# Note: We don't remove /volume1/vda_serwer to preserve user data
+# This follows Synology best practices for package uninstallation
+
+exit 0

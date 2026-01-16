@@ -1,0 +1,40 @@
+#!/bin/sh
+
+PKG_NAME="vda_serwer"
+PKG_DIR="/var/packages/$PKG_NAME"
+VAR_DIR="$PKG_DIR/var"
+UI_DIR="$PKG_DIR/target/ui"
+
+# Stop the service if it's running
+if [ -f "$PKG_DIR/scripts/start-stop-status" ]; then
+    "$PKG_DIR/scripts/start-stop-status" stop
+fi
+
+# Backup configuration files
+if [ -d "$VAR_DIR" ]; then
+    # Create backup directory
+    BACKUP_DIR="/tmp/${PKG_NAME}_upgrade_backup_$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$BACKUP_DIR"
+
+    # Backup important files
+    if [ -f "$VAR_DIR/config.env" ]; then
+        cp "$VAR_DIR/config.env" "$BACKUP_DIR/"
+    fi
+
+    if [ -f "$VAR_DIR/config.json" ]; then
+        cp "$VAR_DIR/config.json" "$BACKUP_DIR/"
+    fi
+
+    # Store backup info for postupgrade
+    echo "$BACKUP_DIR" > "/tmp/${PKG_NAME}_backup_path.txt"
+fi
+
+# Remove UI files (will be reinstalled by new version)
+if [ -d "$UI_DIR" ]; then
+    rm -rf "$UI_DIR"
+fi
+
+# Note: We don't remove the entire package directory as postupgrade will handle that
+# We also preserve user data in /volume1/vda_serwer
+
+exit 0

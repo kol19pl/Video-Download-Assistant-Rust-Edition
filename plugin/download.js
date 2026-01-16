@@ -39,7 +39,7 @@ export async function downloadVideo(vda) {
     const isYouTube = vda.isYouTubeDomain(vda.videoInfo.url);
 
     try {
-        const res = await fetch(`http://${vda.serverIp}:${vda.serverPort}/download`, {
+        const res = await fetch(`http://${vda.serverIp}:${vda.serverPort}/downloadV2`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

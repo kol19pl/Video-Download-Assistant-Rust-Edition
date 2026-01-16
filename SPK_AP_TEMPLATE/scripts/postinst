@@ -33,15 +33,34 @@ USER_FOLDER="${wizard_download_dir:-$PkgShare}"
 
 VAR_DIR="/var/packages/$PKG_NAME/var"
 mkdir -p "$VAR_DIR"
+
 echo "{ \"download_dir\": \"$USER_FOLDER\" }" > "$VAR_DIR/config.json"
-#chmod 644 "$VAR_DIR/config.json"
+
+# Create log and pid files (permissions will be handled by DSM)
+touch "$VAR_DIR/vda_serwer.log" 2>/dev/null || true
+touch "$VAR_DIR/vda_serwer.pid" 2>/dev/null || true
 
 # Tworzymy katalog tmp dla ffmpeg
 TMP_DIR="$VAR_DIR/tmp"
 mkdir -p "$TMP_DIR"
-chown -R vda_serwer:users "$TMP_DIR"
-chmod 755 "$TMP_DIR"
+
+# Setup DSM UI integration - copy UI files to the standard location
+DSM_UI_DIR="/var/packages/$PKG_NAME/ui"
+
+# Create the UI directory if it doesn't exist
+mkdir -p "$DSM_UI_DIR"
+
+# Copy UI files from the package to the DSM UI directory
+# Assuming the package files are in the current directory during installation
+if [ -d "./ui" ]; then
+    cp -r ./ui/* "$DSM_UI_DIR/"
+fi
+
+
+
+# Create a symlink for the UI handler script
+if [ -f "./scripts/ui_handler.sh" ]; then
+    ln -sf "./scripts/ui_handler.sh" "$DSM_UI_DIR/ui_handler.sh"
+fi
 
 exit 0
-
-

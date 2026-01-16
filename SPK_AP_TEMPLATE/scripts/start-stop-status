@@ -11,6 +11,10 @@ CONF_FILE="$VAR_DIR/config.env"
 
 mkdir -p "$VAR_DIR"
 
+# Ensure log and pid files can be created (DSM handles permissions)
+touch "$LOG_FILE" 2>/dev/null || true
+touch "$PID_FILE" 2>/dev/null || true
+
 # Wczytaj konfigurację, jeśli istnieje
 if [ -f "$CONF_FILE" ]; then
     . "$CONF_FILE"
@@ -54,8 +58,9 @@ start() {
 
     [ "$VERBOSE" = "1" ] && ARGS="$ARGS --verbose"
 
-    "$BIN" $ARGS >> "$LOG_FILE" 2>&1 &
-    echo $! > "$PID_FILE"
+    # Use tee to write to log file with proper permissions
+    "$BIN" $ARGS 2>&1 | tee -a "$LOG_FILE" >/dev/null &
+    echo $! | tee "$PID_FILE" >/dev/null
 }
 
 stop() {
