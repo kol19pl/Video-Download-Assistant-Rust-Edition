@@ -99,6 +99,7 @@ fn main() {
         let desktop_file = dirs::home_dir()
             .unwrap()
             .join(".local/share/applications/myapp.desktop");
+        fs::create_dir_all(desktop_file.parent().unwrap()).unwrap();
         let exec_path = env::current_exe().unwrap();
 
         let desktop_content = format!(

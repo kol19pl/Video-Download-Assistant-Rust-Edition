@@ -1,4 +1,4 @@
-name: Rust Multi-Platform Release (ARM + Windows GNU)
+name: Rust Multi-Platform Release
 
 on:
   push:
@@ -10,43 +10,14 @@ env:
   BIN_NAME: vda_server
 
 jobs:
-  build:
+  # =========================
+  # PLUGIN – build once
+  # =========================
+  plugin:
+    name: Build plugin
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-    name: Build (${{ matrix.target }})
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Linux GNU x64
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-
-          # Linux MUSL x64 (Synology Intel)
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-
-          # Windows MSVC x64
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-
-          # Windows GNU x64
-          - os: windows-latest
-            target: x86_64-pc-windows-gnu
-
-          # Windows MSVC x86
-          - os: windows-latest
-            target: i686-pc-windows-msvc
-
-          # Windows MSVC ARM64
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
-
-          # macOS Intel
-          - os: macos-latest
-            target: x86_64-apple-darwin
 
     steps:
       - uses: actions/checkout@v4
@@ -62,33 +33,70 @@ jobs:
         with:
           files: ${{ env.PLUGIN_OUT }}
 
+  # =========================
+  # BINARIES + SPK
+  # =========================
+  build:
+    name: Build (${{ matrix.target }})
+    needs: plugin
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+
+          # Windows
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+
+          - os: windows-latest
+            target: i686-pc-windows-msvc
+
+          # macOS
+          - os: macos-latest
+            target: x86_64-apple-darwin
+
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
 
-      # MUSL + cross tools (x86_64 + aarch64)
+      # MUSL
       - name: Install MUSL tools
-        if: startsWith(matrix.target, 'x86_64-unknown-linux-musl')
+        if: matrix.target == 'x86_64-unknown-linux-musl'
         run: |
           sudo apt update
           sudo apt install -y musl-tools
 
-      - name: Install ARM64 MUSL tools
-        if: matrix.target == 'aarch64-unknown-linux-musl'
-        run: |
-          sudo apt update
-          sudo apt install -y gcc-aarch64-linux-gnu
+      # Windows GNU
+      - name: Install MinGW
+        if: matrix.target == 'x86_64-pc-windows-gnu'
+        run: choco install mingw -y
 
-      # Cache Cargo
+      # Cache Cargo (per target!)
       - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
-          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+            target/${{ matrix.target }}
+          key: ${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build release
-        run: cargo build --release --target ${{ matrix.target }} 
+        run: cargo build --release --target ${{ matrix.target }}
 
       - name: Rename binary
         shell: bash
@@ -109,20 +117,22 @@ jobs:
         with:
           files: ${{ env.BIN_OUT }}
 
+      # =========================
+      # SPK – Synology (only once)
+      # =========================
       - name: Build SPK package
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: |
-          mkdir -p relese/_temp _build/Spk _build/package
-          packageName=$(grep '^package=' "SPK_AP_TEMPLATE/INFO" | cut -d'=' -f2 | sed 's/"//g' | tr -d ' ')
+          mkdir -p release/_temp _build/Spk _build/package
+          packageName=$(grep '^package=' "SPK_AP_TEMPLATE/INFO" | cut -d'=' -f2 | tr -d '" ')
           cp ${{ env.BIN_OUT }} SPK_AP_TEMPLATE/pakiet/
           rsync -av --exclude='pakiet' SPK_AP_TEMPLATE/ _build/Spk/
           rsync -ah SPK_AP_TEMPLATE/pakiet/ _build/package/
           cd _build/package
           tar czf ../Spk/package.tgz *
           cd ../Spk
-          tar cf ../../relese/_temp/${packageName}.spk *
-          cd ../..
-          echo "SPK_OUT=relese/_temp/${packageName}.spk" >> $GITHUB_ENV
+          tar cf ../../release/_temp/${packageName}.spk *
+          echo "SPK_OUT=release/_temp/${packageName}.spk" >> $GITHUB_ENV
 
       - name: Upload SPK to Release
         if: matrix.target == 'x86_64-unknown-linux-musl'

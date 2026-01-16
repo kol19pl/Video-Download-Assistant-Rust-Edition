@@ -28,7 +28,7 @@ if (-Not (Test-Path $outDir)) {
     New-Item -ItemType Directory -Path $outDir | Out-Null
 }
 
-$projectName = Split-Path -Leaf (Get-Location)
+$projectName = "vda_server"
 
 # -----------------------------
 # Build Windows targetów lokalnie
