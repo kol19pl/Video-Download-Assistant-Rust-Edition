@@ -40,12 +40,27 @@ jobs:
           - os: windows-latest
             target: i686-pc-windows-msvc
 
+          # Windows MSVC ARM64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+
           # macOS Intel
           - os: macos-latest
             target: x86_64-apple-darwin
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Package plugin
+        run: |
+          cd plugin
+          zip -r ../plugin.zip .
+          echo "PLUGIN_OUT=plugin.zip" >> $GITHUB_ENV
+
+      - name: Upload plugin to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.PLUGIN_OUT }}
 
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
