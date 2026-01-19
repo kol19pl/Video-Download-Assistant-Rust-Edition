@@ -129,13 +129,36 @@ class VideoDownloadAssistant {
         try {
             const res = await fetch(`http://${this.serverIp}:${this.serverPort}/status`);
             if (res.ok) {
+                const serverInfo = await res.json();
                 statusElement.className = 'status-indicator connected';
-                statusTextElement.textContent = this.t('connected') || 'Connected';
+                statusTextElement.textContent = this.getServerInfoText(serverInfo);
             } else throw new Error('Server not responding');
         } catch {
             statusElement.className = 'status-indicator disconnected';
             statusTextElement.textContent = this.t('disconnected') || 'Disconnected';
         }
+    }
+
+    getServerInfoText(serverInfo) {
+        if (!serverInfo || Object.keys(serverInfo).length === 0) {
+            return this.t('connected') || 'Connected';
+        }
+
+        // Display server information based on actual server response
+        let infoText = this.t('connected') || 'Connected';
+
+        if (serverInfo.version) {
+            infoText += ` | v${serverInfo.version}`;
+        }
+
+        if (serverInfo.downloads_folder) {
+            // Show folder name (extract just the folder name from path)
+            const folderPath = serverInfo.downloads_folder;
+            const folderName = folderPath.split(/[\\/]/).pop() || 'Downloads';
+            infoText += ` | ${folderName}`;
+        }
+
+        return infoText;
     }
 
     async checkYtDlpStatus() {

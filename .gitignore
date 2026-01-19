@@ -1,3 +1,4 @@
 /target/release
 /target
 Cargo.lock
+.vscode/settings.json

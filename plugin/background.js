@@ -32,10 +32,11 @@ function startServerCheck() {
   
   serverCheckInterval = setInterval(async () => {
     try {
-      const settings = await chrome.storage.sync.get(['serverPort']);
+      const settings = await chrome.storage.sync.get(['serverPort', 'serveripinput']);
       const port = settings.serverPort || 8080;
-      
-      const response = await fetch(`http://localhost:${port}/status`);
+      const serverIp = settings.serveripinput || '127.0.0.1';
+
+      const response = await fetch(`http://${serverIp}:${port}/status`);
       if (response.ok) {
         chrome.action.setBadgeText({ text: '●' });
         chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });

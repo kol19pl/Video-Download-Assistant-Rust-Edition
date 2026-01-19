@@ -24,7 +24,7 @@ use std::net::{IpAddr, Ipv4Addr};
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
 use dirs::download_dir;
-use crate::api_handler::{check_ytdlp_handler, download_handler, download_handlerv2, queue_handler, status_handler, verify_premium_handler};
+use crate::api_handler::{check_ytdlp_handler, download_handler, download_handlerv2, progress_handler, queue_handler, status_handler, verify_premium_handler};
 use crate::dodatkowe_funkcje::{downloads_folder, load_queue_from_file, log_info, log_error, save_queue_to_file, set_global_download_dir};
 use crate::models::{DownloadParams, DownloadQueueItem, DownloadRequest, DownloadResponse, JobResult, StatusResponse, YtDlpStatus};
 use crate::pobieracz::download_worker_loop;
@@ -197,6 +197,7 @@ async fn main() -> std::io::Result<()> {
             //api handler
             .route("/status", web::get().to(status_handler))
             .route("/check-ytdlp", web::get().to(check_ytdlp_handler))
+            .route("/progress", web::get().to(progress_handler))
             .route("/queue", web::get().to(queue_handler))
             .route("/download", web::post().to(download_handler))
             .route("/downloadV2", web::post().to(download_handlerv2))

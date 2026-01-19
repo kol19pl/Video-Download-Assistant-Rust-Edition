@@ -3,10 +3,19 @@ use std::path::{Component, Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::Ordering;
 use actix_web::{web, HttpResponse, Responder};
+use serde::Serialize;
 use tokio::sync::oneshot;
 use crate::{dodatkowe_funkcje, log_error, log_info, setup, AppState, DownloadJob, VerifyPremiumRequest, VerifyPremiumResponse, QUEUE_LEN};
 use crate::dodatkowe_funkcje::{downloads_folder, save_queue_to_file};
 use crate::models::{DownloadParams, DownloadQueueItem, DownloadRequest, DownloadResponse, JobResult, StatusResponse};
+
+// Progress response structure
+#[derive(Serialize)]
+struct ProgressResponse {
+    progress: u8,
+    file_name: String,
+    status: String,
+}
 
 pub(crate) async fn status_handler() -> impl Responder {
     let folder = downloads_folder();
@@ -391,4 +400,17 @@ pub(crate) async fn download_handlerv2(
         output_path: None,
         id: Some(job_id),
     })
+}
+
+pub(crate) async fn progress_handler() -> impl Responder {
+    // For now, return a mock progress response
+    // In a real implementation, this would check the actual download progress
+    // from the download worker or queue system
+    let progress_response = ProgressResponse {
+        progress: 0,
+        file_name: String::from("No active download"),
+        status: String::from("idle"),
+    };
+
+    HttpResponse::Ok().json(progress_response)
 }
