@@ -71,9 +71,18 @@ jobs:
           tar cf ../../release/_temp/${packageName}.spk *
           echo "SPK_OUT=release/_temp/${packageName}.spk" >> $GITHUB_ENV
 
+      - name: Get the tag from the triggering workflow
+        id: get_tag
+        run: |
+          # Get the latest release that was created by the Rust Multi-Platform Release workflow
+          # We assume that the latest release is the one we want to add the SPK to
+          LATEST_TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name)
+          echo "TAG_NAME=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Using tag: $LATEST_TAG"
+
       - name: Upload SPK to Release
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.SPK_OUT }}
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ steps.get_tag.outputs.TAG_NAME }}
           append_body: true
