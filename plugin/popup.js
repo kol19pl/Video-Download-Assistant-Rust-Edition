@@ -83,7 +83,9 @@ class VideoDownloadAssistant {
         document.getElementById('settings-btn')?.addEventListener('click', () => this.showView('settings-view'));
         document.getElementById('back-btn')?.addEventListener('click', () => this.showView('main-view'));
         document.getElementById('download-btn')?.addEventListener('click', () => downloadVideo(this));
-        document.getElementById('save-settings-btn')?.addEventListener('click', () => saveSettings(this));
+        document.getElementById('save-settings-btn')?.addEventListener('click', async () => {
+            await saveSettings(this);
+        });
         document.getElementById('cancel-settings-btn')?.addEventListener('click', () => this.showView('main-view'));
 
         document.getElementById('language-select')?.addEventListener('change', async e => {
