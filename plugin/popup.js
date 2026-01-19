@@ -83,6 +83,7 @@ class VideoDownloadAssistant {
         document.getElementById('settings-btn')?.addEventListener('click', () => this.showView('settings-view'));
         document.getElementById('back-btn')?.addEventListener('click', () => this.showView('main-view'));
         document.getElementById('download-btn')?.addEventListener('click', () => downloadVideo(this));
+        document.getElementById('show-links-btn')?.addEventListener('click', () => this.showEpisodeLinks());
         document.getElementById('save-settings-btn')?.addEventListener('click', async () => {
             await saveSettings(this);
         });
@@ -152,7 +153,11 @@ class VideoDownloadAssistant {
         let infoText = this.t('connected') || 'Connected';
 
         if (serverInfo.version) {
-            infoText += ` | v${serverInfo.version}`;
+            // Remove 'v' prefix if already present to avoid double 'v'
+            const version = serverInfo.version.startsWith('v')
+                ? serverInfo.version.substring(1)
+                : serverInfo.version;
+            infoText += ` | v${version}`;
         }
 
         if (serverInfo.downloads_folder) {
@@ -192,10 +197,29 @@ class VideoDownloadAssistant {
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             const response = await chrome.tabs.sendMessage(tab.id, { action: 'getPageVideoInfo' });
-            this.videoInfo = response || { url: tab.url, title: tab.title || 'Unknown', thumbnail: '', timestamp: Date.now() };
+            this.videoInfo = response || {
+                url: tab.url,
+                title: tab.title || 'Unknown',
+                thumbnail: '',
+                timestamp: Date.now(),
+                domain: this.getDomainFromUrl(tab.url),
+                episodeLinks: []
+            };
             this.displayVideoInfo();
+
+            // Don't automatically show episode links popup - user will click the button
         } catch {
             console.error('Failed to get video info');
+        }
+    }
+
+    getDomainFromUrl(url) {
+        try {
+            const domain = new URL(url).hostname;
+            // Remove www. prefix if present
+            return domain.replace(/^www\./, '');
+        } catch (e) {
+            return 'unknown';
         }
     }
 
@@ -215,8 +239,42 @@ class VideoDownloadAssistant {
             thumbEl.style.display = 'block';
             placeholderEl.style.display = 'none';
         } else {
+            thumbEl.src = '';
             thumbEl.style.display = 'none';
             placeholderEl.style.display = 'flex';
+        }
+
+        // Hide download button for ogladajanime.pl
+        this.updateDownloadButtonVisibility();
+    }
+
+    updateDownloadButtonVisibility() {
+        const downloadBtn = document.getElementById('download-btn');
+        const showLinksBtn = document.getElementById('show-links-btn');
+        if (downloadBtn) {
+            console.log('Video info:', this.videoInfo); // Debug log
+            if (this.videoInfo?.domain) {
+                console.log('Domain:', this.videoInfo.domain); // Debug log
+                // Hide download button for ogladajanime.pl
+                if (this.videoInfo.domain.includes('ogladajanime.pl')) {
+                    console.log('Hiding download button for ogladajanime.pl'); // Debug log
+                    downloadBtn.style.display = 'none';
+                    // Show show links button if there are episode links
+                    if (this.videoInfo.episodeLinks && this.videoInfo.episodeLinks.length > 0) {
+                        showLinksBtn.style.display = 'block';
+                    } else {
+                        showLinksBtn.style.display = 'none';
+                    }
+                } else {
+                    console.log('Showing download button for domain:', this.videoInfo.domain); // Debug log
+                    downloadBtn.style.display = 'block';
+                    showLinksBtn.style.display = 'none';
+                }
+            } else {
+                console.log('No domain information in video info'); // Debug log
+                downloadBtn.style.display = 'block';
+                showLinksBtn.style.display = 'none';
+            }
         }
     }
 
@@ -237,6 +295,70 @@ class VideoDownloadAssistant {
             'bestaudio': 'Audio Only (High Quality)'
         };
         return defaults[value] || value;
+    }
+
+    showEpisodeLinksPopup() {
+        console.log('Showing episode links popup for:', this.videoInfo.episodeLinks);
+
+        // Create a popup window with episode links
+        chrome.windows.create({
+            url: `dialog.html?episodeLinks=${encodeURIComponent(JSON.stringify(this.videoInfo.episodeLinks))}&title=${encodeURIComponent(this.videoInfo.title)}`,
+            type: 'popup',
+            width: 600,
+            height: 400
+        });
+    }
+
+    showEpisodeLinks() {
+        console.log('Showing episode links in popup:', this.videoInfo.episodeLinks);
+
+        if (!this.videoInfo?.episodeLinks || this.videoInfo.episodeLinks.length === 0) {
+            console.log('No episode links available');
+            return;
+        }
+
+        const linksSection = document.getElementById('episode-links-section');
+        const linksContainer = document.getElementById('episode-links-container');
+
+        // Clear previous links
+        linksContainer.innerHTML = '';
+
+        // Add each episode link
+        this.videoInfo.episodeLinks.forEach((link, index) => {
+            const linkElement = document.createElement('div');
+            linkElement.className = 'episode-link-item';
+
+            const authorElement = document.createElement('div');
+            authorElement.className = 'episode-link-author';
+            authorElement.textContent = `${index + 1}. ${link.author || 'Unknown Author'}`;
+
+            const descElement = document.createElement('div');
+            descElement.className = 'episode-link-desc';
+            descElement.textContent = link.description || link.url;
+
+            const buttonElement = document.createElement('button');
+            buttonElement.className = 'episode-link-button';
+            buttonElement.textContent = 'Użyj tego źródła';
+            buttonElement.addEventListener('click', () => {
+                this.useEpisodeLink(link);
+            });
+
+            linkElement.appendChild(authorElement);
+            linkElement.appendChild(descElement);
+            linkElement.appendChild(buttonElement);
+            linksContainer.appendChild(linkElement);
+        });
+
+        // Show the links section
+        linksSection.style.display = 'block';
+    }
+
+    useEpisodeLink(link) {
+        console.log('Using episode link:', link);
+
+        // For now, just open the link in a new tab
+        // In future, this could be integrated with the download functionality
+        chrome.tabs.create({ url: link.url });
     }
 }
 

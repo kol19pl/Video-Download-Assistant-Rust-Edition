@@ -461,3 +461,102 @@ body {
 .queue-table td {
     word-break: break-all;
 }
+
+/* Show Links Button */
+.show-links-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.show-links-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4);
+}
+
+.show-links-btn:active {
+    transform: translateY(0);
+}
+
+/* Episode Links Section */
+.episode-links-section {
+    padding: 0 20px 20px;
+    background: #f8f9fa;
+    border-top: 2px solid #e9ecef;
+    margin-top: 10px;
+}
+
+#episode-links-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.episode-links-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.episode-link-item {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 12px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.episode-link-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.episode-link-author {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 6px;
+}
+
+.episode-link-desc {
+    font-size: 13px;
+    color: #6c757d;
+    margin-bottom: 10px;
+    word-break: break-all;
+}
+
+.episode-link-button {
+    padding: 8px 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.episode-link-button:hover {
+    transform: translateY(-1px);
+}
+
+.episode-link-button:active {
+    transform: translateY(0);
+}

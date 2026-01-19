@@ -35,7 +35,7 @@ jobs:
           files: ${{ env.PLUGIN_OUT }}
 
   # =========================
-  # BINARIES + SPK
+  # BINARIES ONLY
   # =========================
   build:
     name: Build (${{ matrix.target }})
@@ -118,56 +118,3 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.BIN_OUT }}
-
-      # =========================
-      # SPK – Synology (only once)
-      # =========================
-      - name: Download latest yt-dlp (zipapp)
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        shell: bash
-        run: |
-          echo "Downloading latest yt-dlp..."
-          mkdir -p SPK_AP_TEMPLATE/pakiet/bin
-
-          curl -L \
-            https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
-            -o SPK_AP_TEMPLATE/pakiet/bin/yt-dlp
-
-          chmod +x SPK_AP_TEMPLATE/pakiet/bin/yt-dlp
-          SPK_AP_TEMPLATE/pakiet/bin/yt-dlp --version
-
-      - name: Update SPK version with build date
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        run: |
-          # Get current date in YYYY.MM.DD format
-          BUILD_DATE=$(date +%Y.%m.%d)
-          # Update version in INFO file
-          sed -i 's/^version=".*"/version="'${BUILD_DATE}'"/' SPK_AP_TEMPLATE/INFO
-          echo "Updated SPK version to: ${BUILD_DATE}"
-
-      - name: Make scripts executable
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        run: |
-          # Make all files in scripts directory executable
-          chmod +x SPK_AP_TEMPLATE/scripts/*
-          echo "Made all scripts in SPK_AP_TEMPLATE/scripts executable"
-
-      - name: Build SPK package
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        run: |
-          mkdir -p release/_temp _build/Spk _build/package
-          packageName=$(grep '^package=' "SPK_AP_TEMPLATE/INFO" | cut -d'=' -f2 | tr -d '" ')
-          cp ${{ env.BIN_OUT }} SPK_AP_TEMPLATE/pakiet/
-          rsync -av --exclude='pakiet' SPK_AP_TEMPLATE/ _build/Spk/
-          rsync -ah SPK_AP_TEMPLATE/pakiet/ _build/package/
-          cd _build/package
-          tar czf ../Spk/package.tgz *
-          cd ../Spk
-          tar cf ../../release/_temp/${packageName}.spk *
-          echo "SPK_OUT=release/_temp/${packageName}.spk" >> $GITHUB_ENV
-
-      - name: Upload SPK to Release
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ env.SPK_OUT }}

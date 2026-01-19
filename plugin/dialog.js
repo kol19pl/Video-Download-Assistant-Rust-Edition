@@ -243,7 +243,11 @@ class VideoDownloadAssistant {
     let infoText = this.translations.connected || 'Connected';
 
     if (serverInfo.version) {
-      infoText += ` | v${serverInfo.version}`;
+      // Remove 'v' prefix if already present to avoid double 'v'
+      const version = serverInfo.version.startsWith('v')
+          ? serverInfo.version.substring(1)
+          : serverInfo.version;
+      infoText += ` | v${version}`;
     }
 
     if (serverInfo.downloads_folder) {
@@ -319,19 +323,37 @@ class DownloadDialog {
     // Get video info from URL params
     const params = new URLSearchParams(window.location.search);
     const videoInfoJson = params.get('videoInfo');
-    
+    const episodeLinksJson = params.get('episodeLinks');
+    const title = params.get('title');
+
     if (videoInfoJson) {
       this.videoInfo = JSON.parse(decodeURIComponent(videoInfoJson));
     }
-    
+
+    // Load episode links if provided
+    if (episodeLinksJson) {
+      try {
+        this.episodeLinks = JSON.parse(decodeURIComponent(episodeLinksJson));
+        this.videoTitle = decodeURIComponent(title || 'Episode Links');
+      } catch (e) {
+        console.error('Failed to parse episode links:', e);
+        this.episodeLinks = [];
+      }
+    }
+
     // Load settings and translations
     await this.loadSettings();
     await this.loadTranslations();
-    
+
     // Initialize UI
     this.initializeElements();
     this.attachEventListeners();
-    this.updateVideoInfo();
+
+    if (this.episodeLinks && this.episodeLinks.length > 0) {
+      this.showEpisodeLinks();
+    } else {
+      this.updateVideoInfo();
+    }
   }
 
   initializeElements() {
@@ -489,6 +511,78 @@ class DownloadDialog {
     this.dialogStatusText.textContent = message;
     this.dialogStatus.className = 'dialog-status ' + type;
     this.dialogStatus.style.display = 'block';
+  }
+
+  showEpisodeLinks() {
+    // Hide normal download UI
+    document.querySelector('.download-options')?.style.display = 'none';
+    document.querySelector('.action-section')?.style.display = 'none';
+
+    // Set title
+    this.dialogTitle.textContent = this.videoTitle || 'Select Episode Source';
+
+    // Create episode links container
+    const linksContainer = document.createElement('div');
+    linksContainer.className = 'episode-links-container';
+
+    // Add header
+    const header = document.createElement('h3');
+    header.textContent = 'Available Sources:';
+    linksContainer.appendChild(header);
+
+    // Add each episode link
+    this.episodeLinks.forEach((link, index) => {
+      const linkElement = document.createElement('div');
+      linkElement.className = 'episode-link-item';
+
+      const authorElement = document.createElement('div');
+      authorElement.className = 'episode-link-author';
+      authorElement.textContent = `${index + 1}. ${link.author || 'Unknown Author'}`;
+
+      const descElement = document.createElement('div');
+      descElement.className = 'episode-link-desc';
+      descElement.textContent = link.description || link.url;
+
+      const buttonElement = document.createElement('button');
+      buttonElement.className = 'episode-link-button';
+      buttonElement.textContent = 'Use this source';
+      buttonElement.addEventListener('click', () => {
+        this.useEpisodeLink(link);
+      });
+
+      linkElement.appendChild(authorElement);
+      linkElement.appendChild(descElement);
+      linkElement.appendChild(buttonElement);
+      linksContainer.appendChild(linkElement);
+    });
+
+    // Insert links container before the download button
+    const dialogContent = document.querySelector('.dialog-content');
+    if (dialogContent) {
+      dialogContent.insertBefore(linksContainer, document.querySelector('.action-section'));
+    }
+  }
+
+  useEpisodeLink(link) {
+    console.log('Using episode link:', link);
+
+    // Update the video info with the selected link
+    this.videoInfo = {
+      url: link.url,
+      title: this.videoTitle || 'Selected Episode',
+      thumbnail: '', // Will be extracted from the new URL
+      timestamp: Date.now()
+    };
+
+    // Show normal download UI
+    document.querySelector('.download-options')?.style.removeAttribute('style');
+    document.querySelector('.action-section')?.style.removeAttribute('style');
+
+    // Update title to show selected source
+    this.dialogTitle.textContent = `Downloading from: ${link.author}`;
+
+    // Remove episode links container
+    document.querySelector('.episode-links-container')?.remove();
   }
 }
 
