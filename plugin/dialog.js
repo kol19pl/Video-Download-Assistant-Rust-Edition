@@ -211,6 +211,7 @@ class VideoDownloadAssistant {
 
       if (response.ok) {
         const serverInfo = await response.json();
+        console.log('Dialog server status response:', serverInfo); // Debug log
         this.serverStatus.className = 'status-indicator connected';
         this.statusText.textContent = this.getServerInfoText(serverInfo);
 
@@ -222,6 +223,7 @@ class VideoDownloadAssistant {
         throw new Error('Server not responding');
       }
     } catch (error) {
+      console.error('Dialog server status error:', error);
       this.serverStatus.className = 'status-indicator disconnected';
       this.statusText.textContent = this.translations.disconnected || 'Disconnected';
 

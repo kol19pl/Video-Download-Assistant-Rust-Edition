@@ -132,10 +132,12 @@ class VideoDownloadAssistant {
             const res = await fetch(`http://${this.serverIp}:${this.serverPort}/status`);
             if (res.ok) {
                 const serverInfo = await res.json();
+                console.log('Server status response:', serverInfo); // Debug log
                 statusElement.className = 'status-indicator connected';
                 statusTextElement.textContent = this.getServerInfoText(serverInfo);
             } else throw new Error('Server not responding');
-        } catch {
+        } catch (error) {
+            console.error('Server status error:', error);
             statusElement.className = 'status-indicator disconnected';
             statusTextElement.textContent = this.t('disconnected') || 'Disconnected';
         }
